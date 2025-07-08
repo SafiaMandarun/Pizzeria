@@ -9,13 +9,13 @@ const Menu = () => {
   const { id } = useParams();
   const { pizze } = useFetchPizze();
 
-  const [totale, setTotale] = useState(0);
-  const [quantitàPizze, setQuantitàPizze] = useState<Record<number, number>>(
+  const [total, setTotal] = useState(0);
+  const [quantitàPizze, setQuantitàPizze] = useState<{ [id: number]: number }>(
     {}
   );
 
   const updateTotal = (diff: number) => {
-    setTotale((prev) => prev + diff);
+    setTotal((prev) => prev + diff);
   };
 
   const updateQuantity = (pizzaId: number, quantity: number) => {
@@ -44,7 +44,6 @@ const Menu = () => {
     const result = await postOrdinePizze(Number(id), ordine);
 
     if (result.success) {
-      alert(result.message);
       navigate(`/${id}/confirmation`);
     } else {
       alert(result.message);
@@ -52,8 +51,7 @@ const Menu = () => {
   };
   return (
     <div className="flex flex-col justify-center items-center gap-5 mt-5">
-      {/* Header */}
-      <div className="w-[60%] h-14 text-gray-800 text-center flex justify-between px-5 items-center rounded">
+      <div className="w-full h-14 text-gray-800 text-center flex justify-between px-5 py-12 items-center rounded bg-white fixed top-0 shadow-md">
         <button
           className="font-bold text-white py-2 px-4 bg-amber-600 hover:bg-amber-700 rounded"
           onClick={() => navigate("/")}
@@ -71,8 +69,7 @@ const Menu = () => {
         </button>
       </div>
 
-      {/* Lista Pizze */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-4 mb-24">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-4 my-24">
         {pizze.map((pizza) => (
           <Card
             key={pizza.id}
@@ -88,11 +85,8 @@ const Menu = () => {
         ))}
       </div>
 
-      {/* Barra Totale */}
       <div className="fixed bottom-0 left-0 w-full bg-gray-800 text-white py-4 px-6 shadow-lg flex justify-between items-center z-50">
-        <span className="text-xl font-semibold">
-          Totale: £ {totale.toFixed(2)}
-        </span>
+        <span className="text-xl font-semibold">Totale: £ {total}</span>
         <button
           onClick={handleSubmit}
           className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300"

@@ -1,15 +1,5 @@
 import { useState } from "react";
-
-interface CardProps {
-  id: number;
-  name: string;
-  description: string;
-  ingredients: string;
-  price: number;
-  image: string;
-  updateTotal: (diff: number) => void;
-  updateQuantity: (pizzaId: number, quantity: number) => void;
-}
+import type { CardProps } from "../types/Card.type";
 
 const Card = ({
   id,

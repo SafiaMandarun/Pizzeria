@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import Home from "./routes/Home";
 import Menu from "./routes/Menu";
 import Confirmation from "./routes/Confirmation";
-import { Order } from "./routes/Order";
+import Order from "./routes/Order";
 
 function App() {
   return (

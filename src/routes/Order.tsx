@@ -1,110 +1,106 @@
 import { useEffect, useState } from "react";
+import fetchPizze from "../services/fetchPizze";
+import type { Pizza, TableOrderResponse } from "../models/Pizzeria.models";
+import { fetchOrdini } from "../services/fetchOrdine";
 import { useNavigate, useParams } from "react-router";
-import { BASE_URL } from "../services/fetchPizze";
 
-interface OrderItem {
-  id: number;
-  table_number: number;
-  pizza_id: number;
-  quantity: number;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Pizza {
-  id: number;
-  name: string;
-  price: number;
-}
-
-export const Order = () => {
-  const navigate = useNavigate();
+const Order = () => {
+  const [pizze, setPizze] = useState<Pizza[]>([]);
+  const [ordini, setOrdini] = useState<TableOrderResponse[]>([]);
+  const [caricamento, setCaricamento] = useState(true);
   const { id } = useParams();
-  const [orders, setOrders] = useState<OrderItem[]>([]);
-  const [pizze, setPizze] = useState<Record<number, Pizza>>({});
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchOrders = async () => {
+    const caricaDati = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/tables/${id}/orders`);
-        if (!res.ok) throw new Error("Errore fetch ordini");
-        const data: OrderItem[] = await res.json();
-        setOrders(data);
-
-        // Se ci sono ordini, carico anche i dati delle pizze usate
-        const pizzaIds = Array.from(new Set(data.map((o) => o.pizza_id)));
-        const resPizze = await fetch(
-          `${BASE_URL}/pizze?ids=${pizzaIds.join(",")}`
+        setCaricamento(true);
+        const menu = await fetchPizze();
+        const ordiniTavolo = await fetchOrdini(Number(id));
+        setPizze(menu);
+        const ordiniOrdinati = ordiniTavolo.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
-        if (!resPizze.ok) throw new Error("Errore fetch pizze");
-        const dataPizze: Pizza[] = await resPizze.json();
-        setPizze(dataPizze.reduce((acc, p) => ({ ...acc, [p.id]: p }), {}));
-      } catch (e) {
-        console.error(e);
+        setOrdini(ordiniOrdinati);
+      } catch (err) {
+        console.error("Errore nel caricamento dati:", err);
       } finally {
-        setLoading(false);
+        setCaricamento(false);
       }
     };
 
-    fetchOrders();
+    caricaDati();
   }, [id]);
 
-  if (loading) return <div>Caricamento...</div>;
+  if (caricamento)
+    return <p className="text-center text-gray-500">Caricamento...</p>;
+  console.log(ordini, "ORDINIIII");
 
-  if (orders.length === 0) {
-    return (
-      <div className="flex flex-col justify-center items-center h-screen space-y-4">
-        <p className="text-lg">Non hai ancora ordinato nulla.</p>
-        <button
-          onClick={() => navigate(`/${id}`)}
-          className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg"
-        >
-          Guarda il menu
-        </button>
-      </div>
-    );
-  }
-
-  // Raggruppa quantità per pizza_id
-  const grouped = orders.reduce<Record<number, number>>((acc, o) => {
-    acc[o.pizza_id] = (acc[o.pizza_id] || 0) + o.quantity;
-    return acc;
-  }, {});
-
-  const items = Object.entries(grouped).map(([pizzaIdStr, qty]) => {
-    const pizzaId = +pizzaIdStr;
-    const pizza = pizze[pizzaId];
-    const total = pizza ? pizza.price * qty : 0;
-    return {
-      pizzaId,
-      name: pizza?.name || `Pizza #${pizzaId}`,
-      quantity: qty,
-      total,
-    };
-  });
-
-  const totalAll = items.reduce((sum, i) => sum + i.total, 0);
+  const totaleTavolo = ordini.reduce((totale, ordine) => {
+    const pizza = pizze.find((p) => p.id === ordine.pizza_id);
+    return pizza ? totale + pizza.price * ordine.quantity : totale;
+  }, 0);
+  console.log(totaleTavolo);
 
   return (
-    <div className="p-6 space-y-6">
-      <h2 className="text-2xl font-bold mb-4">Il tuo ordine</h2>
-      <ul className="space-y-2">
-        {items.map((i) => (
-          <li key={i.pizzaId} className="flex justify-between border-b pb-2">
-            <span>
-              {i.name} x{i.quantity}
-            </span>
-            <span>£ {i.total.toFixed(2)}</span>
-          </li>
-        ))}
-      </ul>
+    <div className=" mx-auto ">
+      <div className="w-full h-14 text-gray-800 text-center flex justify-between px-5 py-12 items-center rounded bg-white fixed top-0 shadow-md">
+        <button
+          className="font-bold text-white py-2 px-4 bg-amber-600 hover:bg-amber-700 rounded"
+          onClick={() => navigate(`/${id}/menu`)}
+        >
+          {" < Menu"}
+        </button>
+        <span className="text-center font-bold text-4xl px-5 md:px-10 py-2">
+          Ordine del Tavolo {id}
+        </span>
+        <button
+          className="font-bold text-white py-2 px-4 bg-amber-600 hover:bg-amber-700 rounded"
+          onClick={() => navigate("/")}
+        >
+          Home
+        </button>
+      </div>
 
-      <div className="mt-6 flex justify-between text-xl font-semibold">
-        <span>Totale:</span>
-        <span>£ {totalAll.toFixed(2)}</span>
+      <div className="space-y-4 max-w-3xl mx-auto my-32">
+        {ordini.map((ordine) => {
+          const pizza = pizze.find((p) => p.id === ordine.pizza_id);
+          if (!pizza) return null;
+
+          const totale = ordine.quantity * pizza.price;
+
+          return (
+            <div
+              key={ordine.id}
+              className="flex items-center gap-4 border rounded-xl shadow p-4 bg-white"
+            >
+              <img
+                src={pizza.image}
+                alt={pizza.name}
+                className="w-24 h-24 object-cover rounded-lg"
+              />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold">{pizza.name}</h3>
+                <p className="text-gray-600">Quantità: {ordine.quantity}</p>
+                <p className="text-gray-600">
+                  Prezzo unitario: €{pizza.price.toFixed(2)}
+                </p>
+                <p className="text-black font-medium">
+                  Totale: €{totale.toFixed(2)}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+        <div className="mt-8 text-right">
+          <p className="text-xl font-bold text-gray-800">
+            Totale Tavolo: €{totaleTavolo.toFixed(2)}
+          </p>
+        </div>
       </div>
     </div>
   );
 };
+
+export default Order;

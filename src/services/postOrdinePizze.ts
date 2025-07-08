@@ -1,8 +1,9 @@
+import type { TableOrderRequestBody } from "../models/Pizzeria.models";
 import { BASE_URL } from "./fetchPizze";
 
 export const postOrdinePizze = async (
   table_number: number,
-  ordine: { pizza_id: number; quantity: number }[]
+  ordine: TableOrderRequestBody[]
 ) => {
   try {
     const response = await fetch(`${BASE_URL}/tables/${table_number}/orders`, {
